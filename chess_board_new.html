@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Board</title>
+  <style>
+    #chessboard {
+      width: 400px;
+      height: 400px;
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .square {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer; 
+    }
+
+    .black {
+      background-color: #769656;
+    }
+
+    .white {
+      background-color: #eeeed2;
+    }
+
+    .piece {
+      font-size: 40px;
+      cursor: move; 
+      user-select: none;
+      -webkit-user-drag: none; 
+    }
+  </style>
+</head>
+<body>
+  <div id="chessboard"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const chessboard = document.getElementById("chessboard");
+      let draggedPiece = null;
+      let prevRow, prevCol;
+
+      // Function to generate chessboard
+      function generateChessboard() {
+        const piecesOrder = ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'];
+        const pawns = '♟'.repeat(8);
+
+        for (let row = 0; row < 8; row++) {
+          for (let col = 0; col < 8; col++) {
+            const square = document.createElement("div");
+            square.classList.add("square");
+            square.id = `square-${row}-${col}`; // Assign unique id to each square
+            if ((row + col) % 2 === 0) {
+              square.classList.add("white");
+            } else {
+              square.classList.add("black");
+            }
+            square.dataset.row = row;
+            square.dataset.col = col;
+
+            const piece = document.createElement("span");
+            piece.classList.add("piece");
+
+            // Set up initial positions for white and black pieces
+            if (row === 0) {
+              piece.textContent = piecesOrder[col];
+            } else if (row === 1) {
+              piece.textContent = pawns[col];
+            } else if (row === 6) {
+              piece.textContent = pawns[col].toUpperCase(); // Capitalize for black pawns
+            } else if (row === 7) {
+              piece.textContent = piecesOrder[col].toUpperCase(); // Capitalize for black pieces
+            }
+
+            piece.draggable = true; // Make pieces draggable
+
+            piece.addEventListener("dragstart", dragStart); // Add dragstart event listener
+
+            square.appendChild(piece);
+            chessboard.appendChild(square);
+          }
+        }
+      }
+
+      // Drag-and-drop functions
+      function dragStart(event) {
+        draggedPiece = event.target;
+        prevRow = draggedPiece.parentElement.dataset.row;
+        prevCol = draggedPiece.parentElement.dataset.col;
+        event.dataTransfer.setData("text/plain", ""); 
+      }
+
+      chessboard.addEventListener("dragover", dragOver); 
+      chessboard.addEventListener("drop", drop); 
+
+      function dragOver(event) {
+        event.preventDefault();
+      }
+
+      function drop(event) {
+    event.preventDefault();
+    const targetSquare = event.target.closest(".square");
+    const targetPiece = targetSquare.querySelector(".piece");
+    if (!targetPiece) {
+        targetSquare.appendChild(draggedPiece);
+        draggedPiece = null;
+    } else {
+        const sourceSquare = draggedPiece.parentElement;
+        const fromSquare = sourceSquare.id; 
+        const toSquare = targetSquare.id;
+        makeMove(fromSquare, toSquare); 
+        targetSquare.removeChild(targetPiece);
+        targetSquare.appendChild(draggedPiece);
+        sourceSquare.appendChild(targetPiece);
+    }
+    const newRow = targetSquare.dataset.row;
+    const newCol = targetSquare.dataset.col;
+    console.log(`Piece moved from (${prevRow},${prevCol}) to (${newRow},${newCol})`);
+}
+
+
+      // Generate the chessboard
+      generateChessboard();
+    });
+
+
+    // Function to make a move on the chessboard via the backend server
+function makeMove(fromSquare, toSquare) {
+    fetch('/move', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fromSquare, toSquare })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log(data);
+    })
+    .catch(error => {
+  
+        console.error('Error:', error);
+    });
+}
+  </script>
+
+
